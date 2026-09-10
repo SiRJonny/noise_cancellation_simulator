@@ -59,7 +59,9 @@ Simplifications / caveats:
    This simulator simply gives both waves equal amplitude.
 4. **No spreading loss, reflections, diffraction, or absorption.** Real open-air sound spreads
    out (amplitude falls with distance), reflects off surfaces, and is absorbed by air. These are
-   ignored here to keep the picture clean.
+   ignored here to keep the picture clean. Wavefronts are drawn at a **constant thickness** — a
+   real pulse keeps its shape in non-dispersive air; what actually spreads is its energy over a
+   larger circle (so amplitude drops), which this lossless model omits.
 5. **2D vs. 3D.** Sound is 3D; this is a 2D slice (like a pond ripple), which is the standard
    visualization but only a slice of the real spherical field.
 

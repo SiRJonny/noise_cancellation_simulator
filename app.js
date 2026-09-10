@@ -5,7 +5,6 @@
   const CELL = 4;                // simulation grid cell size (CSS px)
   const BASE_HALF_WIDTH = 5;     // wavefront band half-thickness (px)
   const BASE_WAVE_SPEED = 130;   // propagation speed (CSS px / second)
-  const EMIT_PERIOD = 0.5;       // noise source emission interval (seconds)
 
   // ---- Colors (RGB) -----------------------------------------------------
   const BG = [13, 17, 23];
@@ -22,6 +21,8 @@
   const clearBtn = document.getElementById('btn-clear');
   const speedInput = document.getElementById('speed');
   const speedVal = document.getElementById('speed-val');
+  const freqInput = document.getElementById('freq');
+  const freqVal = document.getElementById('freq-val');
   const modeButtons = Array.from(document.querySelectorAll('.mode'));
 
   // ---- State ------------------------------------------------------------
@@ -30,7 +31,8 @@
   let waves = [];     // { x, y, r, type: 'noise' | 'anti', triggered:Set }
   let mode = 'noise';
   let running = true;
-  let speed = 1;
+  let speed = 0.5;
+  let frequency = 2;   // pulses per second (Hz)
 
   let cssW = 0, cssH = 0, dpr = 1;
   let gridW = 0, gridH = 0;
@@ -49,8 +51,12 @@
     return t * t * (3 - 2 * t);
   };
 
-  function ringHalfWidth(r) {
-    return Math.min(BASE_HALF_WIDTH + r * 0.012, 16);
+  // Wavefronts keep a constant thickness. A real pulse does not physically
+  // widen as it travels in (non-dispersive) air — its energy spreads over a
+  // larger circle, which lowers amplitude instead. This lossless model keeps
+  // amplitude constant too, so the rings stay the same width and brightness.
+  function ringHalfWidth() {
+    return BASE_HALF_WIDTH;
   }
 
   // ---- Sizing -----------------------------------------------------------
@@ -92,24 +98,30 @@
     for (const s of sources) {
       s.timer -= sdt;
       if (s.timer <= 0) {
-        s.timer += EMIT_PERIOD;
+        s.timer += 1 / frequency;
         waves.push({ x: s.x, y: s.y, r: 0, type: 'noise', triggered: new Set() });
       }
     }
 
-    // 2) Advance every wavefront.
+    // 2) Advance every wavefront (remember the previous radius for crossing tests).
     const dr = BASE_WAVE_SPEED * sdt;
-    for (const w of waves) w.r += dr;
+    for (const w of waves) {
+      w.prevR = w.r;
+      w.r += dr;
+    }
 
-    // 3) Trigger cancellation nodes touched by a noise (red) wavefront.
+    // 3) Trigger a cancellation node when the noise crest first reaches it.
+    //    Launch the anti-wave in phase: give it the radius the crest has already
+    //    moved past the node this frame, so it is tangent to the red wavefront
+    //    instead of running slightly ahead of it.
     const pending = [];
     for (const n of nodes) {
       for (const w of waves) {
         if (w.type !== 'noise' || w.triggered.has(n)) continue;
         const d = Math.hypot(w.x - n.x, w.y - n.y);
-        if (Math.abs(d - w.r) <= ringHalfWidth(w.r) + 2) {
+        if (w.prevR < d && w.r >= d) {
           w.triggered.add(n);
-          pending.push({ x: n.x, y: n.y, r: 0, type: 'anti' });
+          pending.push({ x: n.x, y: n.y, r: w.r - d, type: 'anti' });
         }
       }
     }
@@ -337,6 +349,11 @@
   speedInput.addEventListener('input', () => {
     speed = parseFloat(speedInput.value);
     speedVal.textContent = speed.toFixed(2) + '×';
+  });
+
+  freqInput.addEventListener('input', () => {
+    frequency = parseFloat(freqInput.value);
+    freqVal.textContent = frequency.toFixed(1) + ' Hz';
   });
 
   window.addEventListener('resize', resize);

@@ -44,6 +44,7 @@ Then open <http://localhost:8000>.
 | **Delete** | Click an object to remove it. |
 | **Pause / Play** | Freeze or resume the simulation. |
 | **Speed** | Multiply the propagation / emission speed. |
+| **Frequency** | How often each noise source emits a pulse (in Hz). |
 | **Clear** | Remove all objects and waves. |
 
 ## Files
