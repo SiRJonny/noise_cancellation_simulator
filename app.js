@@ -8,9 +8,9 @@
 
   // ---- Colors (RGB) -----------------------------------------------------
   const BG = [13, 17, 23];
-  const RED = [255, 84, 84];     // noise  = compression (+)
-  const GREEN = [70, 220, 135];  // anti-noise = rarefaction / inverted (−)
-  const GREY = [202, 210, 218];  // cancelled region (light grey)
+  const RED = [150, 50, 50];     // noise  = compression (+)
+  const GREEN = [35, 110, 65];  // anti-noise = rarefaction / inverted (−)
+  const GREY = [13, 17, 23];  // cancelled region
 
   // ---- DOM --------------------------------------------------------------
   const canvas = document.getElementById('canvas');
@@ -32,7 +32,7 @@
   let mode = 'noise';
   let running = true;
   let speed = 0.5;
-  let frequency = 2;   // pulses per second (Hz)
+  let frequency = 1;   // pulses per second (Hz)
 
   let cssW = 0, cssH = 0, dpr = 1;
   let gridW = 0, gridH = 0;
