@@ -25,22 +25,24 @@
   const widthVal = document.getElementById('linewidth-val');
   const strengthInput = document.getElementById('strength');
   const strengthVal = document.getElementById('strength-val');
+  const alternateInput = document.getElementById('alternate');
   const modeButtons = Array.from(document.querySelectorAll('.mode'));
 
   // ---- State ------------------------------------------------------------
-  let sources = [];   // { x, y, timer }
+  let sources = [];   // { x, y, timer, sign }
   let nodes = [];     // { x, y }
-  let waves = [];     // { x, y, r, type: 'noise' | 'anti', triggered:Set }
+  let waves = [];     // { x, y, r, type: 'noise' | 'anti', amp, triggered:Set }
   let mode = 'noise';
   let running = true;
   let speed = 0.5;
   let frequency = 1;   // pulses per second (Hz)
   let lineWidth = 30;      // full stroke width in px (3× the old ~10 px)
   let nodeStrength = 1;    // 0..1 amplitude of anti-noise waves
+  let alternate = true;    // noise source emits alternating +1 / −1 pulses
 
   let cssW = 0, cssH = 0, dpr = 1;
   let gridW = 0, gridH = 0;
-  let redField = null, greenField = null;
+  let field = null;   // signed pressure field (+ = compression, − = rarefaction)
   let offscreen = null, offCtx = null, imageData = null;
 
   let drag = null;    // { type, index }
@@ -68,8 +70,7 @@
     gridW = Math.ceil(cssW / CELL);
     gridH = Math.ceil(cssH / CELL);
 
-    redField = new Float32Array(gridW * gridH);
-    greenField = new Float32Array(gridW * gridH);
+    field = new Float32Array(gridW * gridH);
 
     offscreen = document.createElement('canvas');
     offscreen.width = gridW;
@@ -80,7 +81,7 @@
     if (!initialized) {
       initialized = true;
       // Seed a small example so the page is immediately illustrative.
-      sources.push({ x: cssW * 0.18, y: cssH * 0.5, timer: 0 });
+      sources.push({ x: cssW * 0.18, y: cssH * 0.5, timer: 0, sign: 1 });
       nodes.push({ x: cssW * 0.42, y: cssH * 0.5 });
     }
   }
@@ -89,12 +90,14 @@
   function update(dt) {
     const sdt = dt * speed;
 
-    // 1) Emit noise wavefronts from each source.
+    // 1) Emit noise wavefronts from each source (alternating polarity if enabled).
     for (const s of sources) {
       s.timer -= sdt;
       if (s.timer <= 0) {
         s.timer += 1 / frequency;
-        waves.push({ x: s.x, y: s.y, r: 0, type: 'noise', amp: 1, triggered: new Set() });
+        const amp = alternate ? s.sign : 1;
+        if (alternate) s.sign = -s.sign;
+        waves.push({ x: s.x, y: s.y, r: 0, type: 'noise', amp, triggered: new Set() });
       }
     }
 
@@ -107,7 +110,7 @@
 
     // 3) Trigger a cancellation node when the noise crest first reaches it.
     //    Launch the anti-wave in phase: give it the radius the crest has already
-    //    moved past the node this frame, so it is tangent to the red wavefront
+    //    moved past the node this frame, so it is tangent to the noise wavefront
     //    instead of running slightly ahead of it.
     const pending = [];
     for (const n of nodes) {
@@ -116,7 +119,7 @@
         const d = Math.hypot(w.x - n.x, w.y - n.y);
         if (w.prevR < d && w.r >= d) {
           w.triggered.add(n);
-          pending.push({ x: n.x, y: n.y, r: w.r - d, type: 'anti', amp: nodeStrength });
+          pending.push({ x: n.x, y: n.y, r: w.r - d, type: 'anti', amp: -Math.sign(w.amp) * nodeStrength });
         }
       }
     }
@@ -154,14 +157,12 @@
   }
 
   function render() {
-    // Stamp the pressure field: red waves add +pressure, green waves add −pressure.
-    redField.fill(0);
-    greenField.fill(0);
+    // Stamp every wavefront into the single signed pressure field.
+    field.fill(0);
     const halfW = halfWidth();
     for (const w of waves) {
-      if (w.amp <= 0) continue;   // skip silent anti-waves (strength = 0)
-      if (w.type === 'noise') stampRing(redField, w.x, w.y, w.r, halfW, w.amp);
-      else stampRing(greenField, w.x, w.y, w.r, halfW, w.amp);
+      if (w.amp === 0) continue;   // skip silent anti-waves (strength = 0)
+      stampRing(field, w.x, w.y, w.r, halfW, w.amp);
     }
 
     // Convert the net pressure field into pixels.
@@ -170,7 +171,7 @@
     const data = imageData.data;
     const n = gridW * gridH;
     for (let i = 0, p = 0; i < n; i++, p += 4) {
-      const net = redField[i] - greenField[i];
+      const net = field[i];
       if (net === 0) {
         data[p] = BG[0]; data[p + 1] = BG[1]; data[p + 2] = BG[2]; data[p + 3] = 255;
         continue;
@@ -243,7 +244,7 @@
     const { x, y } = canvasPos(e);
 
     if (mode === 'noise') {
-      sources.push({ x, y, timer: 0 });
+      sources.push({ x, y, timer: 0, sign: 1 });
       return;
     }
     if (mode === 'node') {
@@ -297,8 +298,8 @@
 
   // ---- UI ---------------------------------------------------------------
   const HINTS = {
-    noise: 'Click the canvas to place a noise source (red).',
-    node: 'Click the canvas to place a cancellation node (green).',
+    noise: 'Click the canvas to place a noise source.',
+    node: 'Click the canvas to place a cancellation node.',
     move: 'Drag an object to move it.',
     delete: 'Click an object to delete it.'
   };
@@ -343,6 +344,11 @@
   strengthInput.addEventListener('input', () => {
     nodeStrength = parseFloat(strengthInput.value);
     strengthVal.textContent = nodeStrength.toFixed(2);
+  });
+
+  alternateInput.addEventListener('change', () => {
+    alternate = alternateInput.checked;
+    for (const s of sources) s.sign = 1;   // restart alternation on red (+)
   });
 
   window.addEventListener('resize', resize);

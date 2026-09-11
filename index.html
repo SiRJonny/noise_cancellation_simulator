@@ -11,11 +11,17 @@
   <header>
     <h1>2D Noise Cancellation Simulator</h1>
     <p class="subtitle">
-      Red = noise (compression) &nbsp;·&nbsp; Green = anti-noise (inverted) &nbsp;·&nbsp; overlap that cancels = background (silence)
+      Red = compression (+) &nbsp;·&nbsp; Green = rarefaction (−) &nbsp;·&nbsp; overlap that cancels = background (silence)
     </p>
   </header>
 
   <div class="toolbar">
+    <div class="group">
+      <label class="toggle">
+        <input id="alternate" type="checkbox" checked>
+        Alternating polarity
+      </label>
+    </div>
     <div class="group">
       <button class="mode active" data-mode="noise">Noise Source</button>
       <button class="mode" data-mode="node">Cancel Node</button>
@@ -54,8 +60,8 @@
   </div>
 
   <div class="legend">
-    <span><i class="swatch sw-red"></i> Noise (compression)</span>
-    <span><i class="swatch sw-green"></i> Anti-noise (inverted)</span>
+    <span><i class="swatch sw-red"></i> Compression (+)</span>
+    <span><i class="swatch sw-green"></i> Rarefaction (−)</span>
     <span><i class="swatch sw-black"></i> Cancelled → silence (background)</span>
   </div>
 

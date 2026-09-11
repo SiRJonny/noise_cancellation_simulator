@@ -3,8 +3,8 @@
 A small, interactive, client-side visualization of active noise cancellation. Place noise
 sources and cancellation nodes on a canvas and watch the sound waves superpose.
 
-- **Red** = noise wavefront (a compression / high-pressure crest).
-- **Green** = anti-noise wavefront (an inverted / rarefaction copy).
+- **Red** = compression (+).
+- **Green** = rarefaction (−).
 - **Black / background** = where they overlap and cancel (destructive interference ≈ silence).
 
 No build step and no server-side code — just open `index.html`, or host the folder as a
@@ -38,8 +38,9 @@ Then open <http://localhost:8000>.
 
 | Control | What it does |
 | --- | --- |
-| **Noise Source** | Click the canvas to add a source that periodically emits red wavefronts. |
-| **Cancel Node** | Click the canvas to add a node that emits a green (inverted) wavefront when a red wavefront touches it. |
+| **Noise Source** | Click the canvas to add a source that periodically emits wavefronts. |
+| **Cancel Node** | Click the canvas to add a node that emits an opposite-sign wavefront when a wavefront touches it. |
+| **Alternating polarity** | When on (default), each noise source alternates +1 (red) and −1 (green) pulses; the canceller always emits the opposite sign. |
 | **Move** | Drag any object to reposition it. |
 | **Delete** | Click an object to remove it. |
 | **Pause / Play** | Freeze or resume the simulation. |

@@ -32,6 +32,18 @@ h1 { margin: 0; font-size: 20px; font-weight: 600; }
   align-items: center;
 }
 
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #e6edf3;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.toggle input { cursor: pointer; }
+
 button {
   font: inherit;
   font-size: 13px;
