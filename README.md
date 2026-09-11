@@ -5,7 +5,7 @@ sources and cancellation nodes on a canvas and watch the sound waves superpose.
 
 - **Red** = noise wavefront (a compression / high-pressure crest).
 - **Green** = anti-noise wavefront (an inverted / rarefaction copy).
-- **Light grey** = where they overlap and cancel (destructive interference ≈ silence).
+- **Black / background** = where they overlap and cancel (destructive interference ≈ silence).
 
 No build step and no server-side code — just open `index.html`, or host the folder as a
 GitHub Pages site.
@@ -45,6 +45,8 @@ Then open <http://localhost:8000>.
 | **Pause / Play** | Freeze or resume the simulation. |
 | **Speed** | Multiply the propagation / emission speed. |
 | **Frequency** | How often each noise source emits a pulse (in Hz). |
+| **Line width** | Thickness of the wavefront rings (px). |
+| **Cancel strength** | Amplitude of the anti-noise wave (0–1); below 1 gives partial cancellation. |
 | **Clear** | Remove all objects and waves. |
 
 ## Files

@@ -11,7 +11,7 @@
   <header>
     <h1>2D Noise Cancellation Simulator</h1>
     <p class="subtitle">
-      Red = noise (compression) &nbsp;·&nbsp; Green = anti-noise (inverted) &nbsp;·&nbsp; Light grey = cancelled (≈ silence)
+      Red = noise (compression) &nbsp;·&nbsp; Green = anti-noise (inverted) &nbsp;·&nbsp; overlap that cancels = background (silence)
     </p>
   </header>
 
@@ -27,13 +27,23 @@
       <button id="btn-clear" class="ctrl">✕ Clear</button>
       <label class="speed">
         Speed
-        <input id="speed" type="range" min="0.25" max="3" step="0.05" value="1">
-        <span id="speed-val">1.00×</span>
+        <input id="speed" type="range" min="0.25" max="3" step="0.05" value="0.5">
+        <span id="speed-val">0.50×</span>
       </label>
       <label class="speed">
         Frequency
-        <input id="freq" type="range" min="0.2" max="8" step="0.1" value="2">
-        <span id="freq-val">2.0 Hz</span>
+        <input id="freq" type="range" min="0.2" max="8" step="0.1" value="1">
+        <span id="freq-val">1.0 Hz</span>
+      </label>
+      <label class="speed">
+        Line width
+        <input id="linewidth" type="range" min="4" max="60" step="1" value="30">
+        <span id="linewidth-val">30 px</span>
+      </label>
+      <label class="speed">
+        Cancel strength
+        <input id="strength" type="range" min="0" max="1" step="0.01" value="1">
+        <span id="strength-val">1.00</span>
       </label>
     </div>
   </div>
@@ -45,8 +55,8 @@
 
   <div class="legend">
     <span><i class="swatch sw-red"></i> Noise (compression)</span>
-    <span><i class="swatch sw-green"></i> Anti-noise (rarefaction / inverted)</span>
-    <span><i class="swatch sw-grey"></i> Cancelled (destructive interference)</span>
+    <span><i class="swatch sw-green"></i> Anti-noise (inverted)</span>
+    <span><i class="swatch sw-black"></i> Cancelled → silence (background)</span>
   </div>
 
   <footer>

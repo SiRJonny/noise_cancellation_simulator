@@ -3,14 +3,12 @@
 
   // ---- Tunables ---------------------------------------------------------
   const CELL = 4;                // simulation grid cell size (CSS px)
-  const BASE_HALF_WIDTH = 5;     // wavefront band half-thickness (px)
   const BASE_WAVE_SPEED = 130;   // propagation speed (CSS px / second)
 
   // ---- Colors (RGB) -----------------------------------------------------
-  const BG = [13, 17, 23];
+  const BG = [0, 0, 0];          // background (also = fully-cancelled region)
   const RED = [150, 50, 50];     // noise  = compression (+)
-  const GREEN = [35, 110, 65];  // anti-noise = rarefaction / inverted (−)
-  const GREY = [13, 17, 23];  // cancelled region
+  const GREEN = [35, 110, 65];   // anti-noise = rarefaction / inverted (−)
 
   // ---- DOM --------------------------------------------------------------
   const canvas = document.getElementById('canvas');
@@ -23,6 +21,10 @@
   const speedVal = document.getElementById('speed-val');
   const freqInput = document.getElementById('freq');
   const freqVal = document.getElementById('freq-val');
+  const widthInput = document.getElementById('linewidth');
+  const widthVal = document.getElementById('linewidth-val');
+  const strengthInput = document.getElementById('strength');
+  const strengthVal = document.getElementById('strength-val');
   const modeButtons = Array.from(document.querySelectorAll('.mode'));
 
   // ---- State ------------------------------------------------------------
@@ -33,6 +35,8 @@
   let running = true;
   let speed = 0.5;
   let frequency = 1;   // pulses per second (Hz)
+  let lineWidth = 30;      // full stroke width in px (3× the old ~10 px)
+  let nodeStrength = 1;    // 0..1 amplitude of anti-noise waves
 
   let cssW = 0, cssH = 0, dpr = 1;
   let gridW = 0, gridH = 0;
@@ -44,19 +48,10 @@
 
   // ---- Helpers ----------------------------------------------------------
   const TAU = Math.PI * 2;
-  const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const smoothstep = (a, b, x) => {
-    const t = clamp((x - a) / (b - a), 0, 1);
-    return t * t * (3 - 2 * t);
-  };
 
-  // Wavefronts keep a constant thickness. A real pulse does not physically
-  // widen as it travels in (non-dispersive) air — its energy spreads over a
-  // larger circle, which lowers amplitude instead. This lossless model keeps
-  // amplitude constant too, so the rings stay the same width and brightness.
-  function ringHalfWidth() {
-    return BASE_HALF_WIDTH;
+  // Wavefronts keep a constant thickness (set by the "Line width" slider).
+  function halfWidth() {
+    return lineWidth / 2;
   }
 
   // ---- Sizing -----------------------------------------------------------
@@ -99,7 +94,7 @@
       s.timer -= sdt;
       if (s.timer <= 0) {
         s.timer += 1 / frequency;
-        waves.push({ x: s.x, y: s.y, r: 0, type: 'noise', triggered: new Set() });
+        waves.push({ x: s.x, y: s.y, r: 0, type: 'noise', amp: 1, triggered: new Set() });
       }
     }
 
@@ -121,7 +116,7 @@
         const d = Math.hypot(w.x - n.x, w.y - n.y);
         if (w.prevR < d && w.r >= d) {
           w.triggered.add(n);
-          pending.push({ x: n.x, y: n.y, r: w.r - d, type: 'anti' });
+          pending.push({ x: n.x, y: n.y, r: w.r - d, type: 'anti', amp: nodeStrength });
         }
       }
     }
@@ -132,7 +127,7 @@
     waves = waves.filter((w) => w.r <= maxR);
   }
 
-  function stampRing(field, x, y, r, halfW) {
+  function stampRing(field, x, y, r, halfW, amp) {
     const cx = x / CELL;
     const cy = y / CELL;
     const outer = (r + halfW) / CELL;
@@ -153,7 +148,7 @@
         const delta = d - r;
         if (delta < -halfW || delta > halfW) continue;
         const t = delta / halfW;        // -1 .. 1
-        field[row + gx] += 1 - t * t;   // smooth bump: peak 1 on the crest
+        field[row + gx] += amp * (1 - t * t);   // smooth bump: peak "amp" on the crest
       }
     }
   }
@@ -162,45 +157,29 @@
     // Stamp the pressure field: red waves add +pressure, green waves add −pressure.
     redField.fill(0);
     greenField.fill(0);
+    const halfW = halfWidth();
     for (const w of waves) {
-      const halfW = ringHalfWidth(w.r);
-      if (w.type === 'noise') stampRing(redField, w.x, w.y, w.r, halfW);
-      else stampRing(greenField, w.x, w.y, w.r, halfW);
+      if (w.amp <= 0) continue;   // skip silent anti-waves (strength = 0)
+      if (w.type === 'noise') stampRing(redField, w.x, w.y, w.r, halfW, w.amp);
+      else stampRing(greenField, w.x, w.y, w.r, halfW, w.amp);
     }
 
-    // Convert the field into pixels.
+    // Convert the net pressure field into pixels.
+    //   net > 0 → red,  net < 0 → green,  net = 0 → background (black).
+    // Linear scale: 0 → background, 1 → base colour, 2 → "double strength" (capped).
     const data = imageData.data;
-    const EPS = 0.03;
     const n = gridW * gridH;
     for (let i = 0, p = 0; i < n; i++, p += 4) {
-      const red = redField[i];
-      const green = greenField[i];
-      const total = red + green;
-
-      if (total <= EPS) {
+      const net = redField[i] - greenField[i];
+      if (net === 0) {
         data[p] = BG[0]; data[p + 1] = BG[1]; data[p + 2] = BG[2]; data[p + 3] = 255;
         continue;
       }
-
-      const net = red - green;
-      const t = net / total; // -1 (pure green) .. 0 (cancelled) .. +1 (pure red)
-      let cr, cg, cb;
-      if (t >= 0) {
-        const s = smoothstep(0, 1, t);
-        cr = lerp(GREY[0], RED[0], s);
-        cg = lerp(GREY[1], RED[1], s);
-        cb = lerp(GREY[2], RED[2], s);
-      } else {
-        const s = smoothstep(0, 1, -t);
-        cr = lerp(GREY[0], GREEN[0], s);
-        cg = lerp(GREY[1], GREEN[1], s);
-        cb = lerp(GREY[2], GREEN[2], s);
-      }
-
-      const a = clamp(total, 0, 1);
-      data[p] = Math.round(cr * a + BG[0] * (1 - a));
-      data[p + 1] = Math.round(cg * a + BG[1] * (1 - a));
-      data[p + 2] = Math.round(cb * a + BG[2] * (1 - a));
+      const f = Math.min(Math.abs(net), 2);
+      const base = net > 0 ? RED : GREEN;
+      data[p]     = Math.min(255, Math.round(f * base[0]));
+      data[p + 1] = Math.min(255, Math.round(f * base[1]));
+      data[p + 2] = Math.min(255, Math.round(f * base[2]));
       data[p + 3] = 255;
     }
     offCtx.putImageData(imageData, 0, 0);
@@ -354,6 +333,16 @@
   freqInput.addEventListener('input', () => {
     frequency = parseFloat(freqInput.value);
     freqVal.textContent = frequency.toFixed(1) + ' Hz';
+  });
+
+  widthInput.addEventListener('input', () => {
+    lineWidth = parseFloat(widthInput.value);
+    widthVal.textContent = lineWidth + ' px';
+  });
+
+  strengthInput.addEventListener('input', () => {
+    nodeStrength = parseFloat(strengthInput.value);
+    strengthVal.textContent = nodeStrength.toFixed(2);
   });
 
   window.addEventListener('resize', resize);

@@ -11,8 +11,8 @@ superposition and destructive interference.
 - A **cancellation node** (green) is a secondary source that, when the noise wavefront reaches
   it, emits an **inverted (anti-phase) copy**. This is a "Huygens secondary source".
 - Where red and green overlap, the two waves **superpose**: a compression (+1) plus an inverted
-  rarefaction (−1) sums to ≈ 0, i.e. **destructive interference** — so that region is drawn
-  **light grey** (≈ silence).
+  rarefaction (−1) sums to ≈ 0, i.e. **destructive interference** — so that region renders as
+  the **background colour** (≈ silence).
 
 ## How sound travels in open air
 
@@ -56,7 +56,8 @@ Simplifications / caveats:
    *(Wikipedia — Active noise control.)*
 3. **Amplitude matching is assumed.** Real cancellation needs the anti-noise to match the noise's
    amplitude and phase *at the listener*, which real ANC does adaptively with microphones and DSP.
-   This simulator simply gives both waves equal amplitude.
+   This simulator lets you set the anti-noise amplitude with the "Cancel strength" slider
+   (default 1 = full match; lower values give only partial cancellation).
 4. **No spreading loss, reflections, diffraction, or absorption.** Real open-air sound spreads
    out (amplitude falls with distance), reflects off surfaces, and is absorbed by air. These are
    ignored here to keep the picture clean. Wavefronts are drawn at a **constant thickness** — a
