@@ -64,8 +64,8 @@ button.active { background: #1f6feb; border-color: #58a6ff; color: #ffffff; }
   font-size: 13px;
   color: #9aa7b4;
 }
-#speed, #freq, #linewidth, #strength { width: 140px; }
-#speed-val, #freq-val, #linewidth-val, #strength-val { color: #e6edf3; min-width: 46px; }
+#speed, #freq, #linewidth, #strength, #gap { width: 140px; }
+#speed-val, #freq-val, #linewidth-val, #strength-val, #gap-val { color: #e6edf3; min-width: 46px; }
 
 .canvas-wrap {
   position: relative;

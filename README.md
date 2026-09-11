@@ -41,11 +41,13 @@ Then open <http://localhost:8000>.
 | **Noise Source** | Click the canvas to add a source that periodically emits wavefronts. |
 | **Cancel Node** | Click the canvas to add a node that emits an opposite-sign wavefront when a wavefront touches it. |
 | **Alternating polarity** | When on (default), each noise source alternates +1 (red) and −1 (green) pulses; the canceller always emits the opposite sign. |
+| **Wall** | Toggle a fixed vertical wall with a gap across the middle. |
 | **Move** | Drag any object to reposition it. |
 | **Delete** | Click an object to remove it. |
 | **Pause / Play** | Freeze or resume the simulation. |
 | **Speed** | Multiply the propagation / emission speed. |
-| **Frequency** | How often each noise source emits a pulse (in Hz). |
+| **Frequency** | Sound frequency in Hz (default 500 Hz); sets the wavelength. |
+| **Gap size** | Height of the opening in the wall, in meters (default 1 m). |
 | **Line width** | Thickness of the wavefront rings (px). |
 | **Cancel strength** | Amplitude of the anti-noise wave (0–1); below 1 gives partial cancellation. |
 | **Clear** | Remove all objects and waves. |

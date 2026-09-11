@@ -3,7 +3,9 @@
 
   // ---- Tunables ---------------------------------------------------------
   const CELL = 4;                // simulation grid cell size (CSS px)
-  const BASE_WAVE_SPEED = 130;   // propagation speed (CSS px / second)
+  const BASE_WAVE_SPEED = 130;   // visual propagation speed (CSS px / second)
+  const SPEED_OF_SOUND = 343;    // m/s (real-world speed of sound)
+  const PX_PER_METER = 100;      // display scale: 1 m = 100 px
 
   // ---- Colors (RGB) -----------------------------------------------------
   const BG = [0, 0, 0];          // background (also = fully-cancelled region)
@@ -26,6 +28,9 @@
   const strengthInput = document.getElementById('strength');
   const strengthVal = document.getElementById('strength-val');
   const alternateInput = document.getElementById('alternate');
+  const wallInput = document.getElementById('wall');
+  const gapInput = document.getElementById('gap');
+  const gapVal = document.getElementById('gap-val');
   const modeButtons = Array.from(document.querySelectorAll('.mode'));
 
   // ---- State ------------------------------------------------------------
@@ -35,12 +40,15 @@
   let mode = 'noise';
   let running = true;
   let speed = 0.5;
-  let frequency = 1;   // pulses per second (Hz)
+  let frequency = 500;   // Hz (real-world sound frequency)
   let lineWidth = 30;      // full stroke width in px (3× the old ~10 px)
   let nodeStrength = 1;    // 0..1 amplitude of anti-noise waves
   let alternate = true;    // noise source emits alternating +1 / −1 pulses
+  let wallEnabled = true;  // vertical wall with a gap across the middle
+  let gapMeters = 1;       // gap opening height in meters
 
   let cssW = 0, cssH = 0, dpr = 1;
+  let wallX = 0;   // x position of the wall (set to cssW / 2 on resize)
   let gridW = 0, gridH = 0;
   let field = null;   // signed pressure field (+ = compression, − = rarefaction)
   let offscreen = null, offCtx = null, imageData = null;
@@ -62,6 +70,7 @@
     cssW = Math.max(1, rect.width);
     cssH = Math.max(1, rect.height);
     dpr = window.devicePixelRatio || 1;
+    wallX = cssW / 2;
 
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
@@ -89,12 +98,15 @@
   // ---- Simulation -------------------------------------------------------
   function update(dt) {
     const sdt = dt * speed;
+    const wavelengthPx = SPEED_OF_SOUND * PX_PER_METER / frequency; // physical wavelength (px)
+    const emitPeriod = wavelengthPx / BASE_WAVE_SPEED;              // so rings are λ apart
+    const gapPx = gapMeters * PX_PER_METER;
 
     // 1) Emit noise wavefronts from each source (alternating polarity if enabled).
     for (const s of sources) {
       s.timer -= sdt;
       if (s.timer <= 0) {
-        s.timer += 1 / frequency;
+        s.timer += emitPeriod;
         const amp = alternate ? s.sign : 1;
         if (alternate) s.sign = -s.sign;
         waves.push({ x: s.x, y: s.y, r: 0, type: 'noise', amp, triggered: new Set() });
@@ -125,12 +137,37 @@
     }
     if (pending.length) waves.push(...pending);
 
+    // 3b) Wall diffraction: when a wavefront first reaches the wall, re-emit a
+    //     diffracted wave from the gap opening (Huygens). Narrow gap vs λ → wide
+    //     semicircular spread; wide gap vs λ → narrow beam.
+    if (wallEnabled) {
+      const theta = Math.asin(Math.min(wavelengthPx / Math.max(gapPx, 1e-6), 1));
+      const diffracted = [];
+      for (const w of waves) {
+        if (w.sector) continue;              // already-diffracted waves don't re-diffract
+        const dWall = Math.abs(wallX - w.x);
+        if (w.prevR < dWall && w.r >= dWall) {
+          const dir = Math.sign(wallX - w.x);          // +1 → right, −1 → left
+          const baseAng = dir > 0 ? 0 : Math.PI;
+          diffracted.push({
+            x: wallX, y: cssH / 2,
+            r: w.r - dWall,                             // overshoot keeps it in phase
+            type: w.type,
+            amp: w.amp,
+            triggered: (w.type === 'noise') ? new Set() : null,
+            sector: [baseAng - theta, baseAng + theta]
+          });
+        }
+      }
+      if (diffracted.length) waves.push(...diffracted);
+    }
+
     // 4) Drop wavefronts that have left the visible area.
     const maxR = Math.hypot(cssW, cssH) + 60;
     waves = waves.filter((w) => w.r <= maxR);
   }
 
-  function stampRing(field, x, y, r, halfW, amp) {
+  function stampRing(field, x, y, r, halfW, amp, sector) {
     const cx = x / CELL;
     const cy = y / CELL;
     const outer = (r + halfW) / CELL;
@@ -140,11 +177,19 @@
     const minY = Math.max(0, Math.floor(cy - outer));
     const maxY = Math.min(gridH - 1, Math.ceil(cy + outer));
 
+    // Wall clip: a wave cannot cross the wall; it is blocked on the opposite side.
+    const side = wallEnabled ? Math.sign(x - wallX) : 0;
+
     for (let gy = minY; gy <= maxY; gy++) {
       const py = gy * CELL + CELL / 2;
       const row = gy * gridW;
       for (let gx = minX; gx <= maxX; gx++) {
         const px = gx * CELL + CELL / 2;
+        if (side !== 0 && Math.sign(px - wallX) === -side) continue;  // blocked by wall
+        if (sector) {
+          const ang = Math.atan2(py - y, px - x);
+          if (!angleInSector(ang, sector[0], sector[1])) continue;     // outside the beam
+        }
         const dx = px - x;
         const dy = py - y;
         const d = Math.sqrt(dx * dx + dy * dy);
@@ -156,13 +201,21 @@
     }
   }
 
+  function angleInSector(ang, a0, a1) {
+    let a = ang % TAU; if (a < 0) a += TAU;
+    let s0 = a0 % TAU; if (s0 < 0) s0 += TAU;
+    let s1 = a1 % TAU; if (s1 < 0) s1 += TAU;
+    if (s0 <= s1) return a >= s0 && a <= s1;
+    return a >= s0 || a <= s1;   // wraps across 0
+  }
+
   function render() {
     // Stamp every wavefront into the single signed pressure field.
     field.fill(0);
     const halfW = halfWidth();
     for (const w of waves) {
       if (w.amp === 0) continue;   // skip silent anti-waves (strength = 0)
-      stampRing(field, w.x, w.y, w.r, halfW, w.amp);
+      stampRing(field, w.x, w.y, w.r, halfW, w.amp, w.sector);
     }
 
     // Convert the net pressure field into pixels.
@@ -189,6 +242,7 @@
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(offscreen, 0, 0, cssW, cssH);
 
+    drawWall();
     drawObjects();
   }
 
@@ -222,6 +276,16 @@
     // A minus sign = inverted / anti-phase source.
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(x - 4.5, y - 1.25, 9, 2.5);
+  }
+
+  function drawWall() {
+    if (!wallEnabled) return;
+    const gapPx = gapMeters * PX_PER_METER;
+    const gapTop = cssH / 2 - gapPx / 2;
+    const gapBottom = cssH / 2 + gapPx / 2;
+    ctx.fillStyle = '#8b949e';
+    if (gapTop > 0) ctx.fillRect(wallX - 2, 0, 4, gapTop);
+    if (gapBottom < cssH) ctx.fillRect(wallX - 2, gapBottom, 4, cssH - gapBottom);
   }
 
   // ---- Interaction ------------------------------------------------------
@@ -333,7 +397,7 @@
 
   freqInput.addEventListener('input', () => {
     frequency = parseFloat(freqInput.value);
-    freqVal.textContent = frequency.toFixed(1) + ' Hz';
+    freqVal.textContent = Math.round(frequency) + ' Hz';
   });
 
   widthInput.addEventListener('input', () => {
@@ -349,6 +413,15 @@
   alternateInput.addEventListener('change', () => {
     alternate = alternateInput.checked;
     for (const s of sources) s.sign = 1;   // restart alternation on red (+)
+  });
+
+  wallInput.addEventListener('change', () => {
+    wallEnabled = wallInput.checked;
+  });
+
+  gapInput.addEventListener('input', () => {
+    gapMeters = parseFloat(gapInput.value);
+    gapVal.textContent = gapMeters.toFixed(2) + ' m';
   });
 
   window.addEventListener('resize', resize);
