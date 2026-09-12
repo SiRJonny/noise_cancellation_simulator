@@ -19,6 +19,7 @@
   const hint = document.getElementById('hint');
   const playBtn = document.getElementById('btn-play');
   const clearBtn = document.getElementById('btn-clear');
+  const resetBtn = document.getElementById('btn-reset');
   const speedInput = document.getElementById('speed');
   const speedVal = document.getElementById('speed-val');
   const freqInput = document.getElementById('freq');
@@ -388,6 +389,10 @@
     sources = [];
     nodes = [];
     waves = [];
+  });
+
+  resetBtn.addEventListener('click', () => {
+    waves = [];   // remove only the wavefronts; keep sources, nodes and wall
   });
 
   speedInput.addEventListener('input', () => {

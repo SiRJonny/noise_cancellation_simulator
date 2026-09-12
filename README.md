@@ -50,7 +50,8 @@ Then open <http://localhost:8000>.
 | **Gap size** | Height of the opening in the wall, in meters (default 1 m). |
 | **Line width** | Thickness of the wavefront rings (px). |
 | **Cancel strength** | Amplitude of the anti-noise wave (0–1); below 1 gives partial cancellation. |
-| **Clear** | Remove all objects and waves. |
+| **Clear** | Remove all objects (sources and nodes) and waves. |
+| **Reset waves** | Remove all waves only, keeping the sources, nodes and wall. |
 
 ## Files
 
