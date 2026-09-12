@@ -44,7 +44,7 @@ Then open <http://localhost:8000>.
 | **Wall** | Toggle a fixed vertical wall with a gap across the middle. |
 | **Move** | Drag any object to reposition it. |
 | **Delete** | Click an object to remove it. |
-| **Pause / Play** | Freeze or resume the simulation. |
+| **Pause / Play** | Freeze or resume the simulation (Space bar). |
 | **Speed** | Multiply the propagation / emission speed. |
 | **Frequency** | Sound frequency in Hz (default 500 Hz); sets the wavelength. |
 | **Gap size** | Height of the opening in the wall, in meters (default 1 m). |

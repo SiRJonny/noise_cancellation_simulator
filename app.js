@@ -41,9 +41,9 @@
   let mode = 'noise';
   let running = true;
   let speed = 0.5;
-  let frequency = 500;   // Hz (real-world sound frequency)
+  let frequency = 250;   // Hz (real-world sound frequency)
   let lineWidth = 30;      // full stroke width in px (3× the old ~10 px)
-  let nodeStrength = 1;    // 0..1 amplitude of anti-noise waves
+  let nodeStrength = 0.5;    // 0..1 amplitude of anti-noise waves
   let alternate = true;    // noise source emits alternating +1 / −1 pulses
   let wallEnabled = true;  // vertical wall with a gap across the middle
   let gapMeters = 1;       // gap opening height in meters
@@ -92,7 +92,7 @@
       initialized = true;
       // Seed a small example so the page is immediately illustrative.
       sources.push({ x: cssW * 0.18, y: cssH * 0.5, timer: 0, sign: 1 });
-      nodes.push({ x: cssW * 0.42, y: cssH * 0.5 });
+      nodes.push({ x: cssW * 0.51, y: cssH * 0.5 });
     }
   }
 
@@ -380,9 +380,21 @@
     b.addEventListener('click', () => setMode(b.dataset.mode));
   }
 
-  playBtn.addEventListener('click', () => {
+  function togglePlay() {
     running = !running;
     playBtn.textContent = running ? '⏸ Pause' : '▶ Play';
+  }
+
+  playBtn.addEventListener('click', togglePlay);
+
+  // Space bar toggles play/pause (skipped while typing in an input or on a button).
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space') return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'BUTTON' || t.tagName === 'SELECT' ||
+              t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    e.preventDefault();
+    togglePlay();
   });
 
   clearBtn.addEventListener('click', () => {
